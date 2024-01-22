@@ -20,9 +20,8 @@ DEFINE_NATIVE_FUNC(void, enterRoom, const jstring userID, const jint roomID) {
     liteav::TRTCCloud::Initialize(init_params);
     liteav::EnterRoomParams params;
     liteav::RecordConfig recordConfig;
-    basic::AudioConfig audioConfig;
-    recordConfig.output_sample_rate =audioConfig.sampleRate ;
-    recordConfig.output_channels = audioConfig.channelCount;
+    recordConfig.output_sample_rate = basic::AudioConfig::sampleRate ;
+    recordConfig.output_channels =  basic::AudioConfig::channelCount;
     recordConfig.enable_remote_audio_mix = true;
     params.sdk_app_id = SDKAPPID;
     params.user_id = pUserid;

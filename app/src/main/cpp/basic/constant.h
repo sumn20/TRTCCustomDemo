@@ -8,14 +8,22 @@
 #include <cstdint>
 
 namespace basic {
-    struct AudioConfig {
-        AudioConfig() :
-                sampleRate(48000),
-                channelCount(2) {}
+    class AudioConfig {
+    public:
+        static int sampleRate;
+        static int channelCount;
 
-        int sampleRate;
-        int channelCount;
+        static void setSampleRate(int rate) {
+            sampleRate = rate;
+        }
+
+        static void setChannelCount(int count) {
+            channelCount = count;
+        }
     };
+
+    int AudioConfig::sampleRate = 48000;
+    int AudioConfig::channelCount = 2;
 
     enum class Result : int32_t {
         OK = 0,
