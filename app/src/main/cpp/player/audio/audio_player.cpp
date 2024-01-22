@@ -23,14 +23,15 @@ namespace player {
 
         oboe::AudioStream *AudioPlayer::createAudioStream(oboe::AudioApi audioApi,
                                                           oboe::AudioStreamCallback *callback) {
+            basic::AudioConfig audioConfig;
             oboe::AudioStreamBuilder builder;
             oboe::AudioStream *audioStream = nullptr;
             builder.setPerformanceMode(oboe::PerformanceMode::LowLatency)
                     ->setSharingMode(oboe::SharingMode::Exclusive)
                     ->setAudioApi(audioApi)
                     ->setFormat(AudioFormat::I16)
-                    ->setSampleRate( basic::AudioConfig::sampleRate)
-                    ->setChannelCount( basic::AudioConfig::channelCount)
+                    ->setSampleRate(audioConfig.sampleRate)
+                    ->setChannelCount(audioConfig.channelCount)
                     ->setCallback(callback);
             oboe::Result result = builder.openStream(&audioStream);
             if (result != oboe::Result::OK) {
