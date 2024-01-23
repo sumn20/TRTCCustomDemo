@@ -10,7 +10,7 @@ namespace player {
             size_t bufferSize = 48000 * 2 * sizeof(int16_t);
             mRingBuffer = new RingBuffer(
                     bufferSize);
-            mCallBack = new MyAudioStreamCallback(mRingBuffer);
+            mCallBack = new AudioPlayerStreamCallback(mRingBuffer);
             mStream = createAudioStream(mAudioApi, mCallBack);
             if (mStream != nullptr) {
                 return basic::Result::OK;

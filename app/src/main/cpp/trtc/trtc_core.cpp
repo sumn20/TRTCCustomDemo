@@ -26,14 +26,23 @@ TRTCCloudCore::TRTCCloudCore() {
     liteav::InitParams init_params;
     TRTCCloud::Initialize(init_params);
     pCloud = TRTCCloud::Create(this);
-    audioPlayer = new player::audio::AudioPlayer();
-    audioPlayer->initAudioPlayerDevice();
+    pAudioPlayer = new player::audio::AudioPlayer();
+    pAudioPlayer->initAudioPlayerDevice();
+    pAudioCapture = new capture::audio::AudioCapture();
+    pAudioCapture->initAudioCaptureDevice(pCloud);
 
 }
 
 TRTCCloudCore::~TRTCCloudCore() {
     LOGCATI("~TRTCCloudCore()");
-    audioPlayer->releaseAudioPlayerDevice();
+    if (pAudioPlayer != nullptr) {
+        pAudioPlayer->releaseAudioPlayerDevice();
+        delete pAudioPlayer;
+    }
+    if (pAudioCapture != nullptr) {
+        pAudioCapture->releaseAudioCaptureDevice();
+        delete pAudioCapture;
+    }
     TRTCCloud::Destroy(pCloud);
     pCloud = nullptr;
 
@@ -61,6 +70,9 @@ void TRTCCloudCore::OnExitRoom() {
 
 void TRTCCloudCore::OnLocalAudioChannelCreated() {
     LOGCATI("OnLocalAudioChannelCreated");
+    if (pAudioCapture != nullptr) {
+        pAudioCapture->start();
+    }
 }
 
 void TRTCCloudCore::OnLocalAudioChannelDestroyed() {
@@ -107,14 +119,13 @@ void TRTCCloudCore::OnRemoteAudioReceived(const char *user_id, const AudioFrame 
 }
 
 void TRTCCloudCore::OnRemoteMixedAudioReceived(const AudioFrame &frame) {
-    LOGCATD("sample_rate:%d,channels:%d,size:%zu", frame.sample_rate, frame.channels, frame.size());
-    audioPlayer->start(frame.data(), frame.size());
+    pAudioPlayer->start(frame.data(), frame.size());
 }
 
 int TRTCCloudCore::getCurrentAudioApi() {
     LOGCATD("getCurrentAudioApi");
-    if (audioPlayer != nullptr) {
-        int currentApi = static_cast<int>(audioPlayer->getCurrentAudioApi());
+    if (pAudioPlayer != nullptr) {
+        int currentApi = static_cast<int>(pAudioPlayer->getCurrentAudioApi());
         return currentApi;
     } else {
         return static_cast<int>(AudioApi::Unspecified);
@@ -124,7 +135,23 @@ int TRTCCloudCore::getCurrentAudioApi() {
 
 void TRTCCloudCore::changeAudioApi(oboe::AudioApi audioApi) {
     LOGCATD("changeAudioApi");
-    if (audioPlayer != nullptr) {
-        audioPlayer->changeAudioApi(audioApi);
+    if (pAudioPlayer != nullptr) {
+        pAudioPlayer->changeAudioApi(audioApi);
     }
+    if (pAudioCapture != nullptr) {
+        pAudioCapture->changeAudioApi(audioApi);
+    }
+}
+
+void TRTCCloudCore::startCapture() {
+    if (pAudioCapture != nullptr) {
+        pAudioCapture->prepareStart();
+    }
+}
+
+void TRTCCloudCore::stopCapture() {
+    if (pAudioCapture != nullptr) {
+        pAudioCapture->stop();
+    }
+
 }

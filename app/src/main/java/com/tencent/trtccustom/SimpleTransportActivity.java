@@ -17,11 +17,19 @@ public class SimpleTransportActivity extends BaseActivity {
         String roomID = getIntent().getStringExtra("roomID");
         binding.toolbar.setTitle("房间号:" + roomID);
         JNIManager.getInstance().enterRoom(userID, Integer.parseInt(roomID));
-        binding.logInfo.append("\n当前API:"+AudioApi.apiToString(JNIManager.getInstance().getCurrentAudioApi()));
+        binding.logInfo.append("\n当前API:" + AudioApi.apiToString(JNIManager.getInstance().getCurrentAudioApi()));
         binding.nativeChange.setOnClickListener(v -> {
             binding.logInfo.append("\n切换api");
             JNIManager.getInstance().changeAudioApi(AudioApi.OpenSLES);
-            binding.logInfo.append("\n当前API:"+AudioApi.apiToString(JNIManager.getInstance().getCurrentAudioApi()));
+            binding.logInfo.append("\n当前API:" + AudioApi.apiToString(JNIManager.getInstance().getCurrentAudioApi()));
+        });
+        binding.nativeStartCapture.setOnClickListener(v -> {
+            binding.logInfo.append("\n开始采集");
+            JNIManager.getInstance().startCapture();
+        });
+        binding.nativeStopCapture.setOnClickListener(v -> {
+            binding.logInfo.append("\n停止采集");
+            JNIManager.getInstance().stopCapture();
         });
     }
 

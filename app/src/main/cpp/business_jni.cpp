@@ -21,7 +21,7 @@ DEFINE_NATIVE_FUNC(void, enterRoom, const jstring userID, const jint roomID) {
     liteav::EnterRoomParams params;
     liteav::RecordConfig recordConfig;
     basic::AudioConfig audioConfig;
-    recordConfig.output_sample_rate =audioConfig.sampleRate ;
+    recordConfig.output_sample_rate = audioConfig.sampleRate;
     recordConfig.output_channels = audioConfig.channelCount;
     recordConfig.enable_remote_audio_mix = true;
     params.sdk_app_id = SDKAPPID;
@@ -31,7 +31,7 @@ DEFINE_NATIVE_FUNC(void, enterRoom, const jstring userID, const jint roomID) {
     size_t sig_size = 1024;
     GenerateUserSig(SDKAPPID, kSdkDemoKey, params.user_id, sig, &sig_size);
     params.user_sig = sig;
-    params.scene = liteav::TRTC_SCENE_RECORD;
+    params.scene = liteav::TRTC_SCENE_AUDIO_CALL;
     params.role = liteav::TRTC_ROLE_ANCHOR;
     params.record_config = recordConfig;
     TRTCCloudCore::GetInstance()->getTRTCCloud()->EnterRoom(params);
@@ -45,7 +45,14 @@ DEFINE_NATIVE_FUNC(jint, getCurrentAudioApi) {
     return TRTCCloudCore::GetInstance()->getCurrentAudioApi();
 }
 DEFINE_NATIVE_FUNC(void, changeAudioApi, jint audio_api) {
-    TRTCCloudCore::GetInstance()->changeAudioApi((oboe::AudioApi)audio_api);
+    TRTCCloudCore::GetInstance()->changeAudioApi((oboe::AudioApi) audio_api);
+}
+DEFINE_NATIVE_FUNC(void, startCapture) {
+    TRTCCloudCore::GetInstance()->startCapture();
+
+}
+DEFINE_NATIVE_FUNC(void, stopCapture) {
+    TRTCCloudCore::GetInstance()->stopCapture();
 }
 // java 和 native 方法映射
 static JNINativeMethod gMethods[] = {
@@ -53,6 +60,8 @@ static JNINativeMethod gMethods[] = {
         {"exitRoom",           "()V",                    (void *) exitRoom},
         {"getCurrentAudioApi", "()I",                    (void *) getCurrentAudioApi},
         {"changeAudioApi",     "(I)V",                   (void *) changeAudioApi},
+        {"startCapture",       "()V",                    (void *) startCapture},
+        {"stopCapture",        "()V",                    (void *) stopCapture},
 };
 
 // 注册 native 方法
@@ -66,6 +75,7 @@ void test(JNIEnv *env) {
     env->GetMethodID(clazz, "enterRoom", "(Ljava/lang/String;I)V");
     env->GetMethodID(clazz, "getCurrentAudioApi", "()I");
     env->GetMethodID(clazz, "changeAudioApi", "(I)V");
+
 }
 
 #ifdef __cplusplus

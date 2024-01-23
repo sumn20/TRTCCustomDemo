@@ -8,6 +8,7 @@
 
 #include "include/trtc_cloud.h"
 #include "audio_player.h"
+#include "audio_capture.h"
 #include "Oboe.h"
 
 
@@ -17,7 +18,8 @@ class TRTCCloudCore : public TRTCCloudDelegate {
 private:
     static TRTCCloudCore *m_instance;
     TRTCCloud *pCloud = nullptr;
-    player::audio::AudioPlayer *audioPlayer;
+    player::audio::AudioPlayer *pAudioPlayer;
+    capture::audio::AudioCapture *pAudioCapture;
 
 
 public:
@@ -34,6 +36,10 @@ public:
     int getCurrentAudioApi();
 
     void changeAudioApi(oboe::AudioApi audioApi);
+
+    void startCapture();
+
+    void stopCapture();
 
 public:
     // SDK 内部不可恢复错误通知，需要 App 干预或提示用户。

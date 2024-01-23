@@ -16,7 +16,7 @@ namespace player {
         private:
             oboe::AudioApi mAudioApi = oboe::AudioApi::Unspecified;
             oboe::AudioStream *mStream;
-            MyAudioStreamCallback *mCallBack;
+            AudioPlayerStreamCallback *mCallBack;
             RingBuffer *mRingBuffer;
 
         public:

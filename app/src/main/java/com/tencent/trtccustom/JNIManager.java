@@ -26,4 +26,7 @@ public class JNIManager {
     native void changeAudioApi(int audioApi);
 
     native int getCurrentAudioApi();
+
+    native void startCapture();
+    native void stopCapture();
 }

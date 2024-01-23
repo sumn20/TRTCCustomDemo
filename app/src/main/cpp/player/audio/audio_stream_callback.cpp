@@ -6,11 +6,11 @@
 
 namespace player {
     namespace audio {
-        MyAudioStreamCallback::MyAudioStreamCallback(RingBuffer *ringBuffer) : mRingBuffer(
+        AudioPlayerStreamCallback::AudioPlayerStreamCallback(RingBuffer *ringBuffer) : mRingBuffer(
                 ringBuffer) {}
 
         oboe::DataCallbackResult
-        MyAudioStreamCallback::onAudioReady(oboe::AudioStream *audioStream, void *audioData,
+        AudioPlayerStreamCallback::onAudioReady(oboe::AudioStream *audioStream, void *audioData,
                                             int32_t numFrames) {
             int32_t bytesToRead = numFrames * audioStream->getChannelCount() * sizeof(int16_t);
             int32_t bytesRead = mRingBuffer->read(static_cast<uint8_t *>(audioData), bytesToRead);

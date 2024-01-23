@@ -9,6 +9,8 @@ include_directories(
         ${BUSINESS_CMAKE_DIR}/player/
         ${BUSINESS_CMAKE_DIR}/player/audio/
         ${BUSINESS_CMAKE_DIR}/player/video/
+        ${BUSINESS_CMAKE_DIR}/capture/audio/
+        ${BUSINESS_CMAKE_DIR}/capture/video/
         ${BUSINESS_CMAKE_DIR}/util/
 )
 file(GLOB BUSINESS_CPP_FILES
@@ -18,6 +20,8 @@ file(GLOB BUSINESS_CPP_FILES
         ${BUSINESS_CMAKE_DIR}/trtc/*.cpp
         ${BUSINESS_CMAKE_DIR}/player/audio/*.cpp
         ${BUSINESS_CMAKE_DIR}/player/video/*.cpp
+        ${BUSINESS_CMAKE_DIR}/capture/video/*.cpp
+        ${BUSINESS_CMAKE_DIR}/capture/audio/*.cpp
         )
 add_library(${CMAKE_PROJECT_NAME} SHARED
         ${BUSINESS_CPP_FILES})

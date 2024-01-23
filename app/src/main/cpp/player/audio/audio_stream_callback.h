@@ -11,9 +11,9 @@
 
 namespace player {
     namespace audio {
-        class MyAudioStreamCallback : public oboe::AudioStreamCallback {
+        class AudioPlayerStreamCallback : public oboe::AudioStreamCallback {
         public:
-            MyAudioStreamCallback(RingBuffer *ringBuffer);
+            AudioPlayerStreamCallback(RingBuffer *ringBuffer);
             oboe::DataCallbackResult
             onAudioReady(oboe::AudioStream *audioStream, void *audioData,
                          int32_t numFrames) override;
