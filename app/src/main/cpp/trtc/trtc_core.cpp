@@ -2,8 +2,9 @@
 // Created by Sumn on 2022/7/5.
 //
 
+
 #include "trtc_core.h"
-#include "log_util.h"
+
 
 TRTCCloudCore *TRTCCloudCore::m_instance = nullptr;
 
@@ -26,25 +27,25 @@ TRTCCloudCore::TRTCCloudCore() {
     liteav::InitParams init_params;
     TRTCCloud::Initialize(init_params);
     pCloud = TRTCCloud::Create(this);
-    pAudioPlayer = new player::audio::AudioPlayer();
-    pAudioPlayer->initAudioPlayerDevice();
     pAudioCapture = new capture::audio::AudioCapture();
     pAudioCapture->initAudioCaptureDevice(pCloud);
-
+    mKeepRunning = true;
+    std::thread playbackThread(&TRTCCloudCore::audioPlaybackThread, this);
+    playbackThread.detach();
+    pAudioPlayerManager = new player::audio::AudioPlayerManager();
 }
 
 TRTCCloudCore::~TRTCCloudCore() {
     LOGCATI("~TRTCCloudCore()");
-    if (pAudioPlayer != nullptr) {
-        pAudioPlayer->releaseAudioPlayerDevice();
-        delete pAudioPlayer;
-    }
+    mKeepRunning = false;
     if (pAudioCapture != nullptr) {
         pAudioCapture->releaseAudioCaptureDevice();
         delete pAudioCapture;
     }
     TRTCCloud::Destroy(pCloud);
     pCloud = nullptr;
+    delete pAudioPlayerManager;
+    pAudioPlayerManager = nullptr;
 
 }
 
@@ -101,6 +102,14 @@ void TRTCCloudCore::OnRemoteUserExitRoom(const UserInfo &info) {
 
 void TRTCCloudCore::OnRemoteAudioAvailable(const char *user_id, bool available) {
     LOGCATI("OnRemoteAudioAvailable user_id[%s] available[%d]", user_id, available);
+    std::string userId(user_id);
+    if (available) {
+        auto *player = new player::audio::AudioPlayer();
+        pAudioPlayerManager->addPlayer(userId, player);
+    } else {
+        pAudioPlayerManager->removePlayer(userId);
+    }
+
 }
 
 void TRTCCloudCore::OnRemoteVideoAvailable(const char *user_id, bool available, StreamType type) {
@@ -115,17 +124,18 @@ void TRTCCloudCore::OnRemoteVideoReceived(const char *user_id, StreamType type,
 }
 
 void TRTCCloudCore::OnRemoteAudioReceived(const char *user_id, const AudioFrame &frame) {
-
+    LOGCATI("OnRemoteAudioReceived");
 }
 
 void TRTCCloudCore::OnRemoteMixedAudioReceived(const AudioFrame &frame) {
-    pAudioPlayer->start(frame.data(), frame.size());
+    LOGCATI("OnRemoteMixedAudioReceived");
+
 }
 
 int TRTCCloudCore::getCurrentAudioApi() {
     LOGCATD("getCurrentAudioApi");
-    if (pAudioPlayer != nullptr) {
-        int currentApi = static_cast<int>(pAudioPlayer->getCurrentAudioApi());
+    if (pAudioCapture != nullptr) {
+        int currentApi = static_cast<int>(pAudioCapture->getCurrentAudioApi());
         return currentApi;
     } else {
         return static_cast<int>(AudioApi::Unspecified);
@@ -135,8 +145,8 @@ int TRTCCloudCore::getCurrentAudioApi() {
 
 void TRTCCloudCore::changeAudioApi(oboe::AudioApi audioApi) {
     LOGCATD("changeAudioApi");
-    if (pAudioPlayer != nullptr) {
-        pAudioPlayer->changeAudioApi(audioApi);
+    if (pAudioPlayerManager != nullptr) {
+        pAudioPlayerManager->changeAudioApi(audioApi);
     }
     if (pAudioCapture != nullptr) {
         pAudioCapture->changeAudioApi(audioApi);
@@ -144,9 +154,10 @@ void TRTCCloudCore::changeAudioApi(oboe::AudioApi audioApi) {
 }
 
 void TRTCCloudCore::startCapture() {
-    if (pAudioCapture != nullptr) {
-        pAudioCapture->prepareStart();
+    if (pAudioCapture == nullptr) {
+        pAudioCapture = new capture::audio::AudioCapture();
     }
+    pAudioCapture->prepareStart();
 }
 
 void TRTCCloudCore::stopCapture() {
@@ -155,3 +166,22 @@ void TRTCCloudCore::stopCapture() {
     }
 
 }
+
+void TRTCCloudCore::audioPlaybackThread() {
+    while (mKeepRunning) {
+        std::vector<std::string> userIds = pAudioPlayerManager->getAvailableUsers();
+        for (const std::string &userId: userIds) {
+            AudioFrame frame;
+            int bytesRead = pCloud->GetAudioFrame(userId.c_str(), &frame);
+            if (bytesRead > 0) {
+                player::audio::AudioPlayer *player = pAudioPlayerManager->getPlayer(userId);
+                if (player) {
+                    LOGCATI("sample_rate:%d,channels:%d", frame.sample_rate, frame.channels);
+                    player->start(frame.data(), frame.size(), frame.sample_rate, frame.channels);
+                }
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+}
+

@@ -7,11 +7,13 @@
 namespace player {
     namespace audio {
         basic::Result AudioPlayer::initAudioPlayerDevice() {
-            size_t bufferSize = 48000 * 2 * sizeof(int16_t);
+            LOGCATE("initAudioPlayerDevice");
+            size_t bufferSize =
+                    mAudioConfig.sampleRate * mAudioConfig.channelCount * sizeof(int16_t);
             mRingBuffer = new RingBuffer(
                     bufferSize);
             mCallBack = new AudioPlayerStreamCallback(mRingBuffer);
-            mStream = createAudioStream(mAudioApi, mCallBack);
+            mStream = createAudioStream(mAudioApi, mVolumeType, mCallBack);
             if (mStream != nullptr) {
                 return basic::Result::OK;
             } else {
@@ -21,18 +23,26 @@ namespace player {
         }
 
 
-        oboe::AudioStream *AudioPlayer::createAudioStream(oboe::AudioApi audioApi,
-                                                          oboe::AudioStreamCallback *callback) {
-            basic::AudioConfig audioConfig;
+        oboe::AudioStream *
+        AudioPlayer::createAudioStream(oboe::AudioApi audioApi, basic::VolumeType volumeType,
+                                       oboe::AudioStreamCallback *callback) {
+
             oboe::AudioStreamBuilder builder;
             oboe::AudioStream *audioStream = nullptr;
             builder.setPerformanceMode(oboe::PerformanceMode::LowLatency)
                     ->setSharingMode(oboe::SharingMode::Exclusive)
                     ->setAudioApi(audioApi)
                     ->setFormat(AudioFormat::I16)
-                    ->setSampleRate(audioConfig.sampleRate)
-                    ->setChannelCount(audioConfig.channelCount)
+                    ->setSampleRate(mAudioConfig.sampleRate)
+                    ->setChannelCount(mAudioConfig.channelCount)
                     ->setCallback(callback);
+            if (volumeType == basic::VolumeType::MEDIA) {
+                builder.setUsage(oboe::Usage::Media);
+                builder.setContentType(oboe::ContentType::Music);
+            } else {
+                builder.setUsage(oboe::Usage::VoiceCommunication);
+                builder.setContentType(oboe::ContentType::Speech);
+            }
             oboe::Result result = builder.openStream(&audioStream);
             if (result != oboe::Result::OK) {
                 LOGCATE("createAudioStream error:%s", oboe::convertToText(result));
@@ -40,11 +50,17 @@ namespace player {
             return audioStream;
         }
 
-        basic::Result AudioPlayer::start(const uint8_t *data, size_t dataSize) {
+        basic::Result
+        AudioPlayer::start(const uint8_t *data, size_t dataSize, int sample_rate,int channels) {
+            if (!isInit) {
+                isInit = true;
+                mAudioConfig.sampleRate=sample_rate;
+                mAudioConfig.channelCount=channels;
+                initAudioPlayerDevice();
+            }
             if (mStream != nullptr) {
                 mRingBuffer->write(data, dataSize);
-                if (mRingBuffer->getSize() >= 48000 * 2 * sizeof(int16_t) &&
-                    mStream->getState() != oboe::StreamState::Started) {
+                if (mStream->getState() != oboe::StreamState::Started) {
                     oboe::Result result = mStream->requestStart();
                     if (result != oboe::Result::OK) {
                         LOGCATE("start error:%s", oboe::convertToText(result));
@@ -63,12 +79,11 @@ namespace player {
             }
         }
 
-        basic::Result AudioPlayer::changeAudioApi(oboe::AudioApi audioApi) {
-            if (audioApi != mAudioApi) {
+        basic::Result AudioPlayer::changeStream() {
+            if (mStream) {
                 mStream->requestStop();
                 mStream->close();
-                mAudioApi = audioApi;
-                oboe::AudioStream *tmpStream = createAudioStream(mAudioApi, mCallBack);
+                oboe::AudioStream *tmpStream = createAudioStream(mAudioApi, mVolumeType, mCallBack);
                 if (tmpStream != nullptr) {
                     mStream = tmpStream;
                     return basic::Result::OK;
@@ -76,6 +91,26 @@ namespace player {
                     LOGCATE("changeAudioApi error");
                     return basic::Result::ErrorAudioChange;
                 }
+            } else {
+                return basic::Result::ErrorNull;
+            }
+
+        }
+
+        basic::Result AudioPlayer::changeAudioApi(oboe::AudioApi audioApi) {
+            LOGCATI("AudioPlayer changeAudioApi");
+            if (audioApi != mAudioApi) {
+                mAudioApi = audioApi;
+                return changeStream();
+            }
+            return basic::Result::OK;
+        }
+
+        basic::Result AudioPlayer::setSystemVolumeType(basic::VolumeType volumeType) {
+            LOGCATI("AudioPlayer setSystemVolumeType");
+            if (volumeType != mVolumeType) {
+                mVolumeType = volumeType;
+                return changeStream();
             }
             return basic::Result::OK;
         }
@@ -83,6 +118,7 @@ namespace player {
 
         int AudioPlayer::releaseAudioPlayerDevice() {
             if (mStream != nullptr) {
+                isInit= false;
                 mStream->requestStop();
                 mStream->close();
                 mStream = nullptr;
@@ -91,5 +127,7 @@ namespace player {
             }
             return 0;
         }
+
+
     }
 }

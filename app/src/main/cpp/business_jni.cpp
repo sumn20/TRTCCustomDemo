@@ -19,11 +19,6 @@ DEFINE_NATIVE_FUNC(void, enterRoom, const jstring userID, const jint roomID) {
     liteav::InitParams init_params;
     liteav::TRTCCloud::Initialize(init_params);
     liteav::EnterRoomParams params;
-    liteav::RecordConfig recordConfig;
-    basic::AudioConfig audioConfig;
-    recordConfig.output_sample_rate = audioConfig.sampleRate;
-    recordConfig.output_channels = audioConfig.channelCount;
-    recordConfig.enable_remote_audio_mix = true;
     params.sdk_app_id = SDKAPPID;
     params.user_id = pUserid;
     params.room_id = roomID;
@@ -31,9 +26,8 @@ DEFINE_NATIVE_FUNC(void, enterRoom, const jstring userID, const jint roomID) {
     size_t sig_size = 1024;
     GenerateUserSig(SDKAPPID, kSdkDemoKey, params.user_id, sig, &sig_size);
     params.user_sig = sig;
-    params.scene = liteav::TRTC_SCENE_AUDIO_CALL;
+    params.scene = liteav::TRTC_SCENE_VIDEO_CALL;
     params.role = liteav::TRTC_ROLE_ANCHOR;
-    params.record_config = recordConfig;
     TRTCCloudCore::GetInstance()->getTRTCCloud()->EnterRoom(params);
 }
 DEFINE_NATIVE_FUNC(void, exitRoom) {

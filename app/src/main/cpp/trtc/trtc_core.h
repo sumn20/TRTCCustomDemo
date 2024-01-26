@@ -10,7 +10,9 @@
 #include "audio_player.h"
 #include "audio_capture.h"
 #include "Oboe.h"
-
+#include "audio_player_manager.h"
+#include <thread>
+#include "log_util.h"
 
 using namespace liteav;
 
@@ -18,8 +20,9 @@ class TRTCCloudCore : public TRTCCloudDelegate {
 private:
     static TRTCCloudCore *m_instance;
     TRTCCloud *pCloud = nullptr;
-    player::audio::AudioPlayer *pAudioPlayer;
     capture::audio::AudioCapture *pAudioCapture;
+    std::atomic<bool> mKeepRunning;
+    player::audio::AudioPlayerManager *pAudioPlayerManager;
 
 
 public:
@@ -32,6 +35,8 @@ public:
     ~TRTCCloudCore();
 
     TRTCCloud *getTRTCCloud();
+
+    void  audioPlaybackThread();
 
     int getCurrentAudioApi();
 

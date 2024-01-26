@@ -12,7 +12,8 @@ namespace capture {
             mRingBuffer = new RingBuffer(
                     bufferSize);
             pCloud = trtcCloud;
-            mStream = createAudioStream(mAudioApi);
+            mCallBack = new AudioCaptureStreamCallback(mRingBuffer, pCloud);
+            mStream = createAudioStream(mAudioApi, mVolumeType, mCallBack);
             if (mStream != nullptr) {
                 return basic::Result::OK;
             } else {
@@ -35,52 +36,50 @@ namespace capture {
             }
         }
 
-        basic::Result AudioCapture::changeAudioApi(oboe::AudioApi audioApi) {
-            if (audioApi != mAudioApi) {
+        basic::Result AudioCapture::changeStream() {
+            if (mStream) {
                 mStream->requestStop();
                 mStream->close();
-                mAudioApi = audioApi;
-                oboe::AudioStream *tmpStream = createAudioStream(mAudioApi);
+                oboe::AudioStream *tmpStream = createAudioStream(mAudioApi, mVolumeType, mCallBack);
                 if (tmpStream != nullptr) {
                     mStream = tmpStream;
-                    start();
                     return basic::Result::OK;
                 } else {
                     LOGCATE("changeAudioApi error");
                     return basic::Result::ErrorAudioChange;
                 }
+            } else {
+                return basic::Result::ErrorNull;
+            }
+
+        }
+
+        basic::Result AudioCapture::changeAudioApi(oboe::AudioApi audioApi) {
+            LOGCATI("AudioCapture changeAudioApi");
+            if (audioApi != mAudioApi) {
+                mAudioApi = audioApi;
+                return changeStream();
             }
             return basic::Result::OK;
         }
 
-        oboe::DataCallbackResult
-        AudioCapture::onAudioReady(oboe::AudioStream *oboeStream, void *audioData,
-                                   int32_t numFrames) {
-            mRingBuffer->write(static_cast<uint8_t *>(audioData),
-                               numFrames * oboeStream->getBytesPerFrame());
-            int32_t framesFor20ms = static_cast<int32_t>(oboeStream->getSampleRate() * 0.02);
-            int32_t sizeInBytes = framesFor20ms * oboeStream->getBytesPerFrame();
-            if (mRingBuffer->getSize() >= sizeInBytes) {
-                uint8_t buffer[sizeInBytes];
-                mRingBuffer->read(buffer, sizeInBytes);
-                basic::AudioConfig audioConfig;
-                liteav::AudioFrame audioFrame;
-                audioFrame.channels = audioConfig.channelCount;
-                audioFrame.sample_rate = audioConfig.sampleRate;
-                audioFrame.SetData(static_cast<const uint8_t *>(buffer), sizeInBytes);
-                LOGCATI("SendAudioFrame");
-                pCloud->SendAudioFrame(audioFrame);
+        basic::Result AudioCapture::setSystemVolumeType(basic::VolumeType volumeType) {
+            LOGCATI("AudioCapture setSystemVolumeType");
+            if (volumeType != mVolumeType) {
+                mVolumeType = volumeType;
+                changeStream();
             }
-            return oboe::DataCallbackResult::Continue;
+            return basic::Result::OK;
         }
-
 
         int AudioCapture::releaseAudioCaptureDevice() {
             if (mStream != nullptr) {
-                isPrepare= false;
+                isPrepare = false;
                 mStream->requestStop();
                 mStream->close();
                 mStream = nullptr;
+                delete mCallBack;
+                mCallBack = nullptr;
             }
             if (pCloud != nullptr) {
                 pCloud->DestroyLocalAudioChannel();
@@ -88,7 +87,9 @@ namespace capture {
             return 0;
         }
 
-        oboe::AudioStream *AudioCapture::createAudioStream(oboe::AudioApi api) {
+        oboe::AudioStream *
+        AudioCapture::createAudioStream(oboe::AudioApi api, basic::VolumeType volumeType,
+                                        AudioCaptureStreamCallback *callback) {
             basic::AudioConfig audioConfig;
             oboe::AudioStreamBuilder builder;
             oboe::AudioStream *audioStream = nullptr;
@@ -97,8 +98,14 @@ namespace capture {
                     ->setChannelCount(audioConfig.channelCount)
                     ->setSampleRate(audioConfig.sampleRate)
                     ->setAudioApi(api)
-                    ->setCallback(this);
-
+                    ->setCallback(callback);
+            if (volumeType == basic::VolumeType::MEDIA) {
+                builder.setUsage(oboe::Usage::Media);
+                builder.setContentType(oboe::ContentType::Music);
+            } else {
+                builder.setUsage(oboe::Usage::VoiceCommunication);
+                builder.setContentType(oboe::ContentType::Speech);
+            }
             oboe::Result result = builder.openStream(&audioStream);
             if (result != oboe::Result::OK) {
                 LOGCATE("initAudioCaptureDevice error:%s", oboe::convertToText(result));
@@ -119,6 +126,14 @@ namespace capture {
                 pCloud->CreateLocalAudioChannel(encodeParams);
             }
 
+        }
+
+        oboe::AudioApi AudioCapture::getCurrentAudioApi() {
+            if (mStream != nullptr) {
+                return mStream->getAudioApi();
+            } else {
+                return oboe::AudioApi::Unspecified;
+            }
         }
 
 
